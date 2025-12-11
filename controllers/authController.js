@@ -1,4 +1,16 @@
 const User = require('../models/User');
+const jwt = require('jsonwebtoken');
+
+const generateToken = (userId, currentRole) => {
+    return jwt.sign(
+        {
+            userId,
+            currentRole
+        },
+        process.env.JWT_SECRET,
+        {expiresIn: process.env.JWT_EXPIRE || '7d'}
+    );
+};
 
 const handleErrors = (err) => {
     console.log(err.message, err.code);
@@ -15,6 +27,8 @@ const handleErrors = (err) => {
     }
     return errors;
 }
+
+
 
 module.exports.signup_get = (req, res) => {
     res.json({ message: "Get signup route" });
