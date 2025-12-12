@@ -1,17 +1,25 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors')
+require ('dotenv').config();
+
 const app = express();
 
-app.use(express.json());
 app.use(cors());
-mongoose.connect('mongodb://127.0.0.1:27017/immobook_db')
+app.use(express.json());
+app.use(express.urlencoded({extended: true}))
+app.use('/api/auth', require('./routes/authRoutes'));
+
+app.use((req, res) => {
+    res.status(404).json({
+        succes: false,
+        message: 'Route non trouvée'
+    })
+})
+mongoose.connect(process.env.MONGO_URI)
     .then(() =>  console.log("connected to mongodb"))
     .catch(err => console.log(err))
 
-const authRoutes = require('./routes/authRoutes');
-app.use('/api/auth', authRoutes);
-
-app.listen(3000, () => {
-    console.log('server runs on port 3000');
+app.listen(process.env.PORT, () => {
+    console.log(`server runs on port ${process.env.PORT}`);
 })
