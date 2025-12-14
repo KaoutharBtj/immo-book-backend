@@ -62,6 +62,26 @@ const userSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+
+    isVerified: {
+        type: Boolean,
+        default: false
+    },
+
+    verificationCode: {
+        type: String,
+        required: false
+    },
+
+    verificationCodeExpire: {
+        type: Date,
+        require: false
+    },
+
+    verificationCodeAttempts: {
+        type: Number,
+        default: 0
     }
 
 },{
@@ -92,6 +112,32 @@ userSchema.methods.toJSON = function() {
     delete user.password;
     return  user;
 };
+
+
+userSchema.methods.generateVerificationCode = function() {
+    this.verificationCode = Math.floor(100000, Math.radom() * 900000).toString();
+    this.verificationCodeExpire = new Date(Date.now() + 10 * 60 * 1000);
+    this.verificationCodeAttempts = 0;
+    return this.verificationCode;
+}
+
+userSchema.methods.verifyCode = function(code) {
+    if (this.verificationCodeExpire < new Date()) {
+        return {success: false, message: 'Le code a expiré'};
+    }
+
+    if (this.verificationCodeAttempts > 5) {
+        return { success: false, message : 'Trop de tentatives. Demandez un nouveau code.' };
+    }
+
+    this.verificationCodeAttempts +=1;
+
+    if (this.verificationCode !== code) {
+        return {succes: false, message: 'Code incorrect'}
+    }
+
+    return {syccess: true};
+}
 
 
 const User = mongoose.model('user', userSchema);

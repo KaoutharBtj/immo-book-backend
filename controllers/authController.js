@@ -1,6 +1,7 @@
 const { Server } = require('http');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const { sendVerificationEmail } = require('../config/email');
 
 const generateToken = (userId, currentRole) => {
     return jwt.sign(
@@ -15,7 +16,7 @@ const generateToken = (userId, currentRole) => {
 
 module.exports.signup = async (req, res) => {
     try{
-        const { telephone,email, password, roles, typeCompte, nom, nomEntreprise, numeroRC } = req.body;
+        const { telephone,email, password, typeCompte, nom, nomEntreprise, numeroRC } = req.body;
 
         if(!['physique', 'entreprise'].includes(typeCompte)) {
             return res.status(400).json({
@@ -32,7 +33,7 @@ module.exports.signup = async (req, res) => {
             })
         }
 
-        if(typeCompte === 'entreprise' && numeroRC)  {
+        if(typeCompte === 'entreprise')  {
             const existingRC = await User.findOne({numeroRC});
             if (existingRC) {
                 return res.status(400).json({
@@ -42,7 +43,7 @@ module.exports.signup = async (req, res) => {
             }
         }
 
-        let userData = { email, password, telephone, typeCompte, roles: [] }
+        let userData = { email, password, telephone, typeCompte, roles: [], isVerified: false }
 
         if (typeCompte === 'physique') {
             if (!nom) {
@@ -69,8 +70,23 @@ module.exports.signup = async (req, res) => {
             userData.nomEntreprise = nomEntreprise;
             userData.numeroRC = numeroRC;
         }
-
+    
         const user = await User.create(userData);
+        const verificationCode = user.generateVerificationCode(); 
+        console.log('Code de vérification généré:', verificationCode);
+        await user.save();
+
+        const emailResult = await sendVerificationEmail(
+            user.email,
+            verificationCode,
+            user.nom || user.nomEntreprise
+        );
+
+        if (!emailResult.success) {
+            console.error('Erreur envoi email:', emailResult.error);
+        }
+
+
 
         let token = null;
         if (typeCompte === 'physique') {
@@ -79,7 +95,8 @@ module.exports.signup = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            meassge: 'Inscription réussie',
+            message: 'Inscription réussie',
+            needVerification: true,
             token,
             needRoleSelection: typeCompte === 'entreprise',
             user:{
@@ -95,19 +112,147 @@ module.exports.signup = async (req, res) => {
     }
     catch(error) {
         if(error.name === 'ValidationError') {
-            const message = Object.values(error.erros).map(err => err.message);
+            const message = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({
-                succes: false,
+                success: false,
                 message: 'Erreur de validation',
                 errors: message
             });
         }
 
         res.status(500).json({
-        succes: false,
+        success: false,
         message: 'Erreur serveur lors de l\'inscription',
         error: error.message
-        })
+        });
+    }
+}
+
+module.exports.verifyEmail = async (req, res) => {
+    try{
+        const {userId, code} = req.body;
+
+        if( !userId || !code) {
+            return res.status(400).json({
+                success:  false,
+                message: 'userId et code sont requis'
+            });
+        }
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Utilisateur non trouvé'
+            });
+        }
+
+
+        if(user.isVerified) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ce compte est déjà vérifié'
+            });
+        }
+
+        const verificationResult = user.verifyCode(code);
+
+        if(!verificationResult.success) {
+            return res.status(400).json({
+                success: false,
+                message: verificationResult.message
+            });
+        }
+
+        user.isVerified = true;
+        user.verificationCode = undefined;
+        user.verificationCodeExpire = undefined;
+        user.verificationCodeAttempt = 0;
+        await user.save();  
+        
+        let token = null;
+        if (user.typeCompte === 'physique') {
+            token = generateToken(user._id, 'client_physique');
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Email vérifié avec succès !',
+            token,
+            needRoleSelection: user.typeCompte === 'entreprise',
+            user: {
+                id: user._id,
+                email: user.email,
+                typeCompte : user.typeCompte,
+                roles: user.roles,
+                nom: user.nom,
+                nomEntreprise: user.nomEntreprise,
+                isVerified: user.isVerified
+            }
+        });
+    }catch(error) {
+        res.status(500).json({
+            success: false,
+            message: 'Erreur serveur',
+            error: error.message
+        });
+    } 
+}
+
+module.exports.resendVerificationCode= async (req, res) => {
+    try{
+        const {userId} = req.body;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'userId est requis'
+            });
+        }
+
+        const user = await User.findById(userId);
+
+        if(!user) {
+            return res.status(400).json({
+                success: false,
+                message: 'Utilisateur non trouvé'
+            });
+        }
+
+        if(user.isVerified) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ce compte est déjà vérifié'
+            });
+        }
+
+        const newCode = user.generateVerificationCode();
+        await user.save();
+
+        const emailResult = await sendVerificationEmail(
+            user.email,
+            newCode,
+            user.nom || user.nomEntreprise
+        );
+
+        if(!emailResult.success) {
+            return res.status(500).json({
+                success: false,
+                message: 'Erreur lors de l\'envoi de l\'email'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Un nouveau code a été envoyé à votre email'
+        });
+    }catch(error) {
+        res.status(500).json({
+            success: false,
+            message: 'Erreur serveur',
+            error: error.message
+        });
     }
 }
 
@@ -128,6 +273,16 @@ module.exports.login = async (req, res) => {
             return res.status(401).json({
                 success: false,
                 message: 'Email ou mot de passe incorrect'
+            });
+        }
+
+        if(!user.isVerified) {
+            return res.status(403).json({
+                success: false,
+                message: 'Veuillez vérifier votre email avant de vous connecter',
+                needVerification: true,
+                userId: user._id,
+                email: user.email
             });
         }
 
