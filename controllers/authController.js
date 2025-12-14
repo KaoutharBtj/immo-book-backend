@@ -100,7 +100,7 @@ module.exports.signup = async (req, res) => {
             token,
             needRoleSelection: typeCompte === 'entreprise',
             user:{
-                id: user._id,
+                userId: user._id,
                 email: user.email,
                 typeCompte: user.typeCompte,
                 nom: user.nom,

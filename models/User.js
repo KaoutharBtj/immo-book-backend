@@ -79,7 +79,7 @@ const userSchema = new mongoose.Schema({
         require: false
     },
 
-    verificationCodeAttempts: {
+    verificationCodeAttempt: {
         type: Number,
         default: 0
     }
@@ -111,7 +111,7 @@ userSchema.methods.toJSON = function() {
 
 
 userSchema.methods.generateVerificationCode = function() {
-    this.verificationCode = Math.floor(100000, Math.random() * 900000).toString();
+    this.verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     this.verificationCodeExpire = new Date(Date.now() + 10 * 60 * 1000);
     this.verificationCodeAttempts = 0;
     return this.verificationCode;
@@ -122,17 +122,17 @@ userSchema.methods.verifyCode = function(code) {
         return {success: false, message: 'Le code a expiré'};
     }
 
-    if (this.verificationCodeAttempts > 5) {
+    if (this.verificationCodeAttempt > 5) {
         return { success: false, message : 'Trop de tentatives. Demandez un nouveau code.' };
     }
 
-    this.verificationCodeAttempts +=1;
+    this.verificationCodeAttempt +=1;
 
     if (this.verificationCode !== code) {
-        return {succes: false, message: 'Code incorrect'}
+        return {success: false, message: 'Code incorrect'}
     }
 
-    return {syccess: true};
+    return {success: true};
 }
 
 

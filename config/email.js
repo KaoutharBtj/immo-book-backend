@@ -19,7 +19,7 @@ const sendVerificationEmail = async (email, code, userName) => {
         const transporter = createTransporter();
 
         const mailOptions = {
-            from: `"ImmoBook" <${process.env.EMAIL_USER}>`,
+            from: process.env.SMTP_USER,
             to: email,
             subject: 'Vérifiez votre compte ImmoBook',
             html: `
