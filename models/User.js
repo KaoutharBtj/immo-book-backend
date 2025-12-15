@@ -39,7 +39,7 @@ const userSchema = new mongoose.Schema({
     nom: {
         type: String,
         required: function() {
-           return  this.typeCompte === 'physique';
+            return  this.typeCompte === 'physique';
         }
     },
 
