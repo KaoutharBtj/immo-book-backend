@@ -52,10 +52,13 @@ module.exports.getMyProject = async (req, res) => {
         if (statut) query.statut= statut;
         if (typeBien) query.typeBien = typeBien;
 
+        const pageNumber = parseInt(page);
+        const limitNumber = parseInt(limit);
+
         const projects = await Project.find(query)
         .sort({createdAt: -1})
-        .limit(limit * 1)
-        .skip((page - 1) * limit)
+        .limit(limitNumber)
+        .skip((pageNumber - 1) * limitNumber)
         .select('-__v');
 
         const count = await Project.countDocuments(query);
@@ -63,8 +66,8 @@ module.exports.getMyProject = async (req, res) => {
         res.status(200).json({
             success: true,
             projects,
-            totalPages: Math.ceil(count / limit),
-            currentPage: page,
+            totalPages: Math.ceil(count / limitNumber),
+            currentPage: pageNumber,
             total: count
         });     
     }catch (error) {
@@ -76,3 +79,315 @@ module.exports.getMyProject = async (req, res) => {
         });
     }
 };
+
+module.exports.getProjectById = async (req, res) => {
+
+    try {
+        const project = await Project.findById(req.params.id).populate('promoteur', 'nomEntreprise email telephone');
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: 'Projet non trouvé'
+            });
+        }
+
+        project.vues += 1;
+        await project.save();
+
+        res.status(200).json({
+            success: true,
+            project
+        });
+    }catch(error) {
+        console.error('❌ Erreur récupération projet:', error);
+        res.status(500).json({
+            success: false,
+            message:'Erreur lors de la récupération du projet',
+            error: error.message
+        });
+    }
+}
+
+module.exports.updateProject = async (req, res) => {
+    try {
+        let project = await Project.findById(req.params.id);
+
+        if(!project) {
+            return res.status(404).json({
+                success: false,
+                message: 'Projet non trouvé'
+            });
+        }
+
+        if (project.promoteur.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'Non autorisé à modifier ce projet'
+            });
+        }
+
+        project = await Project.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            {
+                new: true,
+                runValidators: true
+            }
+        )
+
+        return res.status(200).json({
+            success: true,
+            message : 'Projet mis à jour avec succès',
+            project
+        });
+
+    }catch(error) {
+        if(error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(err => err.message);
+            res.status(400).json({
+                success: false,
+                message: 'Erreur de validation',
+                error: messages
+            });
+        }
+
+        console.log('❌ Erreur mise à jour projet:', error);
+        res.status(500).json({
+            success: false,
+            message:'Erreur lors de la mise à jour du projet',
+            error: error.message
+        });
+    }
+}
+
+module.exports.deleteProject = async (req, res) => {
+
+    try {
+
+        const project = await Project.findById(req.params.id);
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: 'Projet non trouvé'
+            });
+        }
+
+        if (project.promoteur.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'Non autorisé à supprimer ce projet'
+            });
+        }
+
+        await project.deleteOne();
+
+        res.status(200).json({
+            success: true,
+            message: 'Projet supprimé avec succès'
+        });
+    }catch(error) {
+        console.log('Erreur suppression projet:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Erreur lors de la suppression du projet',
+                error: error.message
+            });
+    }
+}
+
+module.exports.addPhase = async (req, res) => {
+
+    try {
+        const project = await Project.findById(req.params.id);
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: 'Projet non trouvé'
+            });
+        }
+
+        if (project.promoteur.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'Non autorisé à modifier ce projet'
+            });
+        }
+
+        const { titre, description, dateDebut, dateFin, images, statut } = req.body;
+
+        const numeroPhase = project.phases.length + 1;
+
+        const nouvellePhase = {
+            numero: numeroPhase,
+            titre,
+            description,
+            dateDebut,
+            dateFin,
+            images: images || [],
+            statut: statut || 'non_commence'
+        };
+
+        project.phases.push(nouvellePhase);
+        await project.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Phase ajoutée avec succès',
+            phase: project.phases[project.phases.length - 1]
+        });
+    }catch(error) {
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(err => err.message);
+
+            res.status(400).json({
+                success: false,
+                message: 'Erreur de validation',
+                error: messages
+            });
+        }
+
+        console.log('Erreur ajout phase:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erreur lors de l\'ajout de la phase',
+            error: error.message
+        });
+    }
+}
+
+module.exports.updatePhase = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id);
+
+        if(!project) {
+            return res.status(404).json({
+                success: false,
+                message: 'Projet non trouvé'
+            });
+        }
+
+        if(project.promoteur.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'Non autorisé à modifier ce projet'
+            });
+        }
+
+        const phase = project.phases.id(req.params.phaseId);
+
+        if (!phase) {
+            return res.status(404).json({
+                success: false,
+                message: 'Phase non trouvée'
+            });
+        }
+
+        Object.keys(req.body).forEach(key => {
+            phase[key] = req.body[key];
+        });
+
+        await project.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Phase mise à jour avec succès',
+            phase
+        });
+    }catch (error) {
+        console.error('Erreur mise à jour phase:', error);
+        res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la mise à jour de la phase',
+        error: error.message
+        });
+    }
+}
+
+module.exports.deletePhase = async  (req, res) => {
+        try {
+            const project = await Project.findById(req.params.id);
+
+            if (!project) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Projet non trouvé'
+                });
+            }
+
+            if (project.promoteur.toString() !== req.user._id.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Non autorisé à modifier ce projet'
+                });
+            }
+
+            project.phases.pull(req.params.phaseId);
+            await project.save();
+
+            res.status(200).json({
+            success: true,
+            message: 'Phase supprimée avec succès',
+            });
+
+        }catch (error) {
+            console.error('Erreur suppression phase:', error);
+            res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la suppression de la phase',
+            error: error.message
+            });
+        }
+}
+
+module.exports.searchProject = async (req, res) => {
+    try{
+        const { typeBien, ville, prixMin, prixMax, surfaceMin, surfaceMax, nombreChambres, statut, page = 1, limit = 10 } = req.query;
+
+        const query = {actif: true};
+        
+        if (typeBien) query.typeBien = typeBien;
+        if (ville) query['localisation.ville'] = new RegExp(ville, 'i');
+        if (prixMin || prixMax) {
+            query.prix = {};
+            if (prixMin) query.prix.$gte = prixMin;
+            if (prixMax) query.prix.$lte = prixMax;
+        }
+        if (surfaceMin || surfaceMax) {
+            query['caracteristiques.surfaceTotale'] = {};
+            if (surfaceMin) query['caracteristiques.surfaceTotale'].$gte = surfaceMin;
+            if (surfaceMax) query['caracteristiques.surfaceTotale'].$lte = surfaceMax;
+        }
+        if (nombreChambres) query['caracteristiques.nombreChambres'] = { $gte: nombreChambres };
+        if (statut) query.statut = statut;
+
+        const pageNumber = parseInt(page);
+        const limitNumber = parseInt(limit);
+
+        const projects = await Project.find(query) 
+            .populate('promoteur', 'client_entreprise')
+            .sort({createdAt: -1})
+            .limit(limit * 1)
+            .limit(limitNumber)
+            .skip((pageNumber - 1) * limitNumber)
+        const count = await Project.countDocuments(query);
+        
+        
+        res.status(200).json({
+        success: true,
+        projects,
+        totalPages: Math.ceil(count / limit),
+        currentPage: page,
+        total: count
+        });
+    }catch (error) {
+        console.error('Erreur recherche projets:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la recherche',
+            error: error.message
+        });
+    }
+}
