@@ -342,52 +342,52 @@ module.exports.deletePhase = async  (req, res) => {
         }
 }
 
-module.exports.searchProject = async (req, res) => {
-    try{
-        const { typeBien, ville, prixMin, prixMax, surfaceMin, surfaceMax, nombreChambres, statut, page = 1, limit = 10 } = req.query;
+    module.exports.searchProject = async (req, res) => {
+        try{
+            const { typeBien, ville, prixMin, prixMax, surfaceMin, surfaceMax, nombreChambres, statut, page = 1, limit = 10 } = req.query;
 
-        const query = {actif: true};
-        
-        if (typeBien) query.typeBien = typeBien;
-        if (ville) query['localisation.ville'] = new RegExp(ville, 'i');
-        if (prixMin || prixMax) {
-            query.prix = {};
-            if (prixMin) query.prix.$gte = prixMin;
-            if (prixMax) query.prix.$lte = prixMax;
+            const query = {actif: true};
+            
+            if (typeBien) query.typeBien = typeBien;
+            if (ville) query['localisation.ville'] = new RegExp(ville, 'i');
+            if (prixMin || prixMax) {
+                query.prix = {};
+                if (prixMin) query.prix.$gte = prixMin;
+                if (prixMax) query.prix.$lte = prixMax;
+            }
+            if (surfaceMin || surfaceMax) {
+                query['caracteristiques.surfaceTotale'] = {};
+                if (surfaceMin) query['caracteristiques.surfaceTotale'].$gte = surfaceMin;
+                if (surfaceMax) query['caracteristiques.surfaceTotale'].$lte = surfaceMax;
+            }
+            if (nombreChambres) query['caracteristiques.nombreChambres'] = { $gte: nombreChambres };
+            if (statut) query.statut = statut;
+
+            const pageNumber = parseInt(page);
+            const limitNumber = parseInt(limit);
+
+            const projects = await Project.find(query) 
+                .populate('promoteur', 'client_entreprise')
+                .sort({createdAt: -1})
+                .limit(limitNumber)
+                .skip((pageNumber - 1) * limitNumber)
+
+            const count = await Project.countDocuments(query);
+            
+            
+            res.status(200).json({
+            success: true,
+            projects,
+            totalPages: Math.ceil(count / limit),
+            currentPage: page,
+            total: count
+            });
+        }catch (error) {
+            console.error('Erreur recherche projets:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Erreur lors de la recherche',
+                error: error.message
+            });
         }
-        if (surfaceMin || surfaceMax) {
-            query['caracteristiques.surfaceTotale'] = {};
-            if (surfaceMin) query['caracteristiques.surfaceTotale'].$gte = surfaceMin;
-            if (surfaceMax) query['caracteristiques.surfaceTotale'].$lte = surfaceMax;
-        }
-        if (nombreChambres) query['caracteristiques.nombreChambres'] = { $gte: nombreChambres };
-        if (statut) query.statut = statut;
-
-        const pageNumber = parseInt(page);
-        const limitNumber = parseInt(limit);
-
-        const projects = await Project.find(query) 
-            .populate('promoteur', 'client_entreprise')
-            .sort({createdAt: -1})
-            .limit(limit * 1)
-            .limit(limitNumber)
-            .skip((pageNumber - 1) * limitNumber)
-        const count = await Project.countDocuments(query);
-        
-        
-        res.status(200).json({
-        success: true,
-        projects,
-        totalPages: Math.ceil(count / limit),
-        currentPage: page,
-        total: count
-        });
-    }catch (error) {
-        console.error('Erreur recherche projets:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la recherche',
-            error: error.message
-        });
     }
-}
