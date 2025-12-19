@@ -1,5 +1,5 @@
-const Project = require('../models/Project'); 
 const User = require('../models/User');
+const Project = require('../models/Project'); 
 
 module.exports.createProject = async (req, res) => {
     try {
@@ -342,7 +342,7 @@ module.exports.deletePhase = async  (req, res) => {
         }
 }
 
-    module.exports.searchProject = async (req, res) => {
+module.exports.searchProject = async (req, res) => {
         try{
             const { typeBien, ville, prixMin, prixMax, surfaceMin, surfaceMax, nombreChambres, statut, page = 1, limit = 10 } = req.query;
 
@@ -390,4 +390,4 @@ module.exports.deletePhase = async  (req, res) => {
                 error: error.message
             });
         }
-    }
+}
