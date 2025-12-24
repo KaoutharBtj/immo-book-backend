@@ -15,15 +15,15 @@ const {createProject,
 
 
 router.get('/search', searchProject);
-router.get('/:id', getProjectById);
+router.get('/mes-projets', protect, authorize('promoteur'), getMyProject);
+router.get('/:id', protect, authorize('promoteur'), getProjectById);
 
-router.post('/', protect, authorize, createProject);
-router.get('/mes-projets', protect, authorize, getMyProject);
-router.put('/:id', protect, authorize, updateProject);
-router.delete('/:id', protect, authorize, deleteProject);
+router.post('/', protect, authorize('promoteur'), createProject);
+router.put('/:id', protect, authorize('promoteur'), updateProject);
+router.delete('/:id', protect, authorize('promoteur'), deleteProject);
 
-router.post('/:id/phases', protect, authorize, addPhase);
-router.put('/:id/phases/:phaseId', protect, authorize, updatePhase);
-router.delete('/:id/phases/:phaseId', protect, authorize, deletePhase);
+router.post('/:id/phases', protect, authorize('promoteur'), addPhase);
+router.put('/:id/phases/:phaseId', protect, authorize('promoteur'), updatePhase);
+router.delete('/:id/phases/:phaseId', protect, authorize('promoteur'), deletePhase);
 
 module.exports = router;
