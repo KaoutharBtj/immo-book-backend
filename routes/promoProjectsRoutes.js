@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {protect, authorize} = require ('../middleware/authMiddleware'); 
+const upload = require('../middleware/upload');
 
 const {createProject,
         getMyProject, 
@@ -18,7 +19,7 @@ router.get('/search', searchProject);
 router.get('/mes-projets', protect, authorize('promoteur'), getMyProject);
 router.get('/mes-projets/:id', protect, authorize('promoteur'), getProjectById);
 
-router.post('/mes-projets', protect, authorize('promoteur'), createProject);
+router.post('/mes-projets', protect,upload.single('imagePrincipale'), authorize('promoteur'), createProject);
 router.put('/mes-projets/:id', protect, authorize('promoteur'), updateProject);
 router.delete('/mes-projets/:id', protect, authorize('promoteur'), deleteProject);
 

@@ -3,6 +3,7 @@ const Project = require('../models/Project');
 
 module.exports.createProject = async (req, res) => {
     try {
+
         if(!req.user.roles.includes('promoteur')) {
             return res.status(403).json({
                 success: false,
@@ -10,19 +11,103 @@ module.exports.createProject = async (req, res) => {
             });
         }
 
-        const projectData = {
-            ...req.body,
-            promoteur: req.user._id
-        };
+        console.log('Body reçu:', req.body);
+        console.log('Fichier reçu:', req.file);
 
-        const project = await Project.create(projectData);
+        const {
+            titre,
+            description,
+            typeBien,
+            statut,
+            prix,
+            dateDebut,
+            dateFinPrevue,
+            adresse,
+            ville,
+            codePostal,
+            quartier,
+            latitude,
+            longitude,
+            surfaceTotale,
+            nombreChambres,
+            nombreSallesBain,
+            nombreSallesEau,
+            etage,
+            ascenseur,
+            balcon,
+            terrasse,
+            garage,
+            jardin,
+            piscine,
+            climatisation,
+            chauffage,
+            cuisine,
+            meuble,
+            securite,
+            gardien
+        } = req.body;
+
+        // Vérifier que l'image a été uploadée
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'L\'image principale est requise'
+            });
+        }
+
+        // Construire le chemin de l'image
+        const imagePrincipale = `/uploads/${req.file.filename}`;
+
+        // Créer le projet
+        const nouveauProjet = await Project.create({
+            titre,
+            description,
+            typeBien,
+            statut,
+            prix: Number(prix),
+            dateDebut,
+            dateFinPrevue: dateFinPrevue || undefined,
+            imagePrincipale,
+            localisation: {
+                adresse: adresse,
+                ville: ville,
+                codePostal: codePostal || '',
+                quartier: quartier,
+                coordinates: {
+                    latitude: Number(latitude),
+                    longitude: Number(longitude)
+                }
+            },
+            surfaceTotale: Number(surfaceTotale),
+            caracteristiques: {
+                surfaceTotale: Number(surfaceTotale),
+                nombreChambres: Number(nombreChambres) || 0,
+                nombreSallesBain: Number(nombreSallesBain) || 0,
+                nombreSallesEau: Number(nombreSallesEau) || 0,
+                etage: Number(etage) || 0,
+                ascenseur: ascenseur === 'true',
+                balcon: balcon === 'true',
+                terrasse: terrasse === 'true',
+                garage: garage === 'true',
+                jardin: jardin === 'true',
+                piscine: piscine === 'true',
+                climatisation: climatisation === 'true',
+                chauffage: chauffage === 'true',
+                cuisine: cuisine || 'non_equipee',
+                meuble: meuble === 'true',
+                securite: securite === 'true',
+                gardien: gardien === 'true'
+            },
+            promoteur: req.user._id 
+        });
 
         res.status(201).json({
             success: true,
-            message:  'Projet créé avec succès',
-            project
+            message: 'Projet créé avec succès',
+            project: nouveauProjet
         });
-    }catch(error) {
+
+    } catch(error) {
         if (error.name === 'ValidationError') {
             const messages = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({
@@ -39,9 +124,6 @@ module.exports.createProject = async (req, res) => {
             error: error.message
         });
     }
-
-
-
 }
 
 module.exports.getMyProject = async (req, res) => {
