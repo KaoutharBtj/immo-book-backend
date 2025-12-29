@@ -56,7 +56,7 @@ module.exports.createProject = async (req, res) => {
         }
 
         // Construire le chemin de l'image
-        const imagePrincipale = `/uploads/${req.file.filename}`;
+        const imagePrincipale = `uploads/${req.file.filename}`;
 
         // Créer le projet
         const nouveauProjet = await Project.create({
