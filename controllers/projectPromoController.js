@@ -1,5 +1,8 @@
 const User = require('../models/User');
 const Project = require('../models/Project'); 
+const fs = require('fs');
+const path = require('path');
+
 
 module.exports.createProject = async (req, res) => {
     try {
@@ -47,7 +50,7 @@ module.exports.createProject = async (req, res) => {
             gardien
         } = req.body;
 
-        // Vérifier que l'image a été uploadée
+
         if (!req.file) {
             return res.status(400).json({
                 success: false,
@@ -68,6 +71,7 @@ module.exports.createProject = async (req, res) => {
             dateDebut,
             dateFinPrevue: dateFinPrevue || undefined,
             imagePrincipale,
+            galerie: [],
             localisation: {
                 adresse: adresse,
                 ville: ville,
@@ -126,6 +130,7 @@ module.exports.createProject = async (req, res) => {
     }
 }
 
+
 module.exports.getMyProject = async (req, res) => {
     try {
         const { statut, typeBien, page = 1, limit = 10 } = req.query;
@@ -153,7 +158,7 @@ module.exports.getMyProject = async (req, res) => {
             total: count
         });     
     }catch (error) {
-        console.error('❌ Erreur récupération projets:', error);
+        console.error('Erreur récupération projets:', error);
         res.status(500).json({
             success: false,
             message: 'Erreur lors de la récupération des projets',
@@ -480,3 +485,141 @@ module.exports.searchProject = async (req, res) => {
             });
         }
 }
+
+module.exports.addImagesToGallery = async (req, res) => {
+
+        try {
+            const { id } = req.params;
+
+            console.log('=== AJOUT IMAGES GALERIE ===');
+            console.log('Projet ID:', id);
+            console.log('Fichiers reçus:', req.files);
+
+            if (!req.files || req.files.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Aucune image fournie'
+                })
+            }
+
+            const project = await Project.findById(id);
+
+            if (!project) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Projet non trouvé'
+                })
+            }
+            if (project.promoteur.toString() !== req.user._id.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Non autorisé à modifier ce projet'
+                })
+            }
+
+            const newImages = req.files.map(file => `/uploads/${file.filename}`);
+
+
+            if ((project.galerie?.length || 0) + newImages.length > 10) {
+                newImages.forEach(imgPath => {
+                    const filepath =    path.join(__dirname, '..', imgPath);
+                    if (fs.existsSync(filepath)) {
+                        fs.unlinkSync(filepath);
+                    }
+                });
+
+                return res.status(400).json({
+                    success: false,
+                    message: `la galerie ne peut contenir que 10 images maximum (actuellement ${project.galerie.length - newImages.length})`
+                });
+            }
+
+            console.log('GALERIE AVANT SAVE:', project.galerie)
+            project.galerie = [...(project.galerie || []), ...newImages];
+            await project.save();
+            console.log('Save est bien atteite');
+
+            res.status(200).json({
+                success: true,
+                message: `${newImages.length} images ajoutées avec succès`,
+                galerie: project.galerie
+            });
+                
+        }  catch(error) {
+            console.log('Erreur ajout images galerie:', error);
+
+            res.status(500).json({
+                success: false,
+                message:  'Erreur lors de l\'ajout des images',
+                error: error.message
+            });
+        }
+}
+
+module.exports.deleteImageFromGallery = async(req, res) => {
+    try {
+        const { id } = req.params;
+        const { imageUrl} = req.body;
+
+        console.log('=== SUPPRESSION IMAGE GALERIE ===');
+        console.log('Projet ID:', id);
+        console.log('Image à supprimer:', imageUrl);
+
+        if (!imageUrl) {
+            return res.status(400).json({
+                success: false,
+                message: 'URL de l\'image requise'
+            });
+        }
+
+        const project = await Project.findById(id);
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: 'Projet non trouvé'
+            });
+        }
+
+        if (project.promoteur.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'Non autorisé à modifier ce projet'
+            });
+        }
+
+        if (!project.galerie.includes(imageUrl)) {
+            return res.status(404).json({
+                success: false,
+                message: 'Image non trouvée dans la galerie'
+            });
+        }
+
+        project.galerie = project.galerie.filter(img => img !== imageUrl);
+        const filepath = path.join(__dirname, '..', imageUrl);
+        if (fs.existsSync(filepath)) {
+            fs.unlinkSync(filepath);
+            console.log('Fichier physique supprimé:', filepath);
+        }else {
+            console.log('Fichier physique non trouvé:', filepath);
+        }
+
+        await project.save();
+
+        console.log('Image supprimée de la galerie');
+        console.log('Nouvelle galerie:', project.galerie);
+
+        res.status(200).json({
+            success: true,
+            message: 'Image supprimée avec succès',
+            galerie: project.galerie
+        });
+    } catch (error) {
+        console.log('Erreur de suppression image', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la suppression de l\'image',
+            error: error.message
+        });
+    }
+};

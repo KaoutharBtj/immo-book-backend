@@ -66,7 +66,7 @@ const projectSchema = new mongoose.Schema({
 
     galerie: {
         type: [String],
-        validate: [arr => arr.length <= 10, 'Maximum 5 images autorisées']
+        validate: [arr => arr.length <= 10, 'Maximum 10 images autorisées']
     },
 
     localisation: {
@@ -107,7 +107,6 @@ const projectSchema = new mongoose.Schema({
             min: [0, 'La surface doit être positive']
         },
         
-        // APPARTEMENT / VILLA / STUDIO / PENTHOUSE
         nombreChambres: {
             type: Number,
             min: 0
@@ -148,7 +147,7 @@ const projectSchema = new mongoose.Schema({
             min: 0
         },
         
-        // VILLA / RIAD
+
         surfaceTerrain: {
             type: Number,
             min: 0
@@ -162,7 +161,6 @@ const projectSchema = new mongoose.Schema({
             default: false
         },
         
-        // BUREAU / LOCAL COMMERCIAL
         openSpace: {
             type: Boolean,
             default: false
@@ -189,7 +187,7 @@ const projectSchema = new mongoose.Schema({
             default: false
         },
         
-        // TERRAIN
+
         constructible: {
         type: Boolean,
         default: false
@@ -203,7 +201,6 @@ const projectSchema = new mongoose.Schema({
         enum: ['residentielle', 'commerciale', 'industrielle', 'agricole', 'mixte']
         },
         
-        // ÉQUIPEMENTS GÉNÉRAUX
         climatisation: {
             type: Boolean,
             default: false

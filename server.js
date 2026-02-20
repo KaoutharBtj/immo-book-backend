@@ -13,6 +13,7 @@ app.use('/api/v1/auth', require('./routes/authRoutes'));
 app.use('/api/v1/projets', require ('./routes/promoProjectsRoutes'));
 app.use('/uploads', express.static( './uploads'));
 
+
 app.use((req, res) => {
     res.status(404).json({
         succes: false,
