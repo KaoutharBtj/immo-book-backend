@@ -45,11 +45,46 @@ module.exports.getAllProjects = async (req, res) => {
         })
 
     }catch(error) {
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: error.message
         });
     }
+}
 
+module.exports.getProjectById = async(req, res) => {
+    try{
+        if(req.user.roles !== 'client_physique' && req.user.roles !== 'client_entreprise') {
+            return res.status(403).json({
+                success: false,
+                message: 'Seuls les clients peuvement consulter ce projet'
+            });
+        }
+
+        const project = await Project.findById(req.params.id)
+        .populate('promoteur', 'nomEntreprise numeroRC email telephone ');
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: "ce projet n'existe pas"
+            });
+        }
+
+        project.vues +=1;
+        await project.save();
+
+        return res.status(200).json({
+            success: true,
+            project
+        });
+    }catch(error) {
+        console.error(' Erreur récupération projet:', error);
+        return res.status(500).json({
+            success:false,
+            message: "Erreur lors de la récupération du projet",
+            error: error.message
+        });
+    }
 
 }

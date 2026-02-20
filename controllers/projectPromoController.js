@@ -189,13 +189,13 @@ module.exports.getProjectById = async (req, res) => {
         project.vues += 1;
         await project.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             project
         });
     }catch(error) {
-        console.error('❌ Erreur récupération projet:', error);
-        res.status(500).json({
+        console.error(' Erreur récupération projet:', error);
+        return res.status(500).json({
             success: false,
             message:'Erreur lors de la récupération du projet',
             error: error.message
