@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const reservationSchema = new mongoose.Schema({
     client: {
         type: mongoose.Schema.Types.ObjectId,
+
         ref:'User',
         required: true
     },
@@ -12,8 +13,8 @@ const reservationSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'approved', 'refused'],
-        default: 'pending'
+        enum: ['en attente', 'acceptée', 'refusée'],
+        default: 'en attente'
     }
 }, { timestamps: true })
 

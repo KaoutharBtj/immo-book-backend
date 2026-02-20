@@ -165,7 +165,7 @@ module.exports.getMyProject = async (req, res) => {
             error: error.message
         });
     }
-};
+}
 
 module.exports.getProjectById = async (req, res) => {
 
