@@ -72,7 +72,7 @@ module.exports.getAllReview = async(req, res) => {
             }
 
             const reviews = await Review.find({
-                project: req.body.projectId,
+                project: req.params.projectId,
             });
 
             if (reviews.length === 0) {
