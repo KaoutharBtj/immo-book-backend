@@ -246,7 +246,7 @@ module.exports.updateProject = async (req, res) => {
             });
         }
 
-        console.log('❌ Erreur mise à jour projet:', error);
+        console.log('Erreur mise à jour projet:', error);
         res.status(500).json({
             success: false,
             message:'Erreur lors de la mise à jour du projet',

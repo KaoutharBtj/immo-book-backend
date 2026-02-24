@@ -1,21 +1,14 @@
 const Project = require('../models/Project');
 const Review = require('../models/Review');
-const user = require('../models/User');
-consy Project = require('../models/Project');
+const User = require('../models/User');
+const Reservation = require('../models/Reservation');
 
 module.exports.createReview = async (req, res) => {
     try{
 
-        if ( req.user.roles !== 'client_physique' && req.user.roles !== 'client_entreprise') {
-            return res.status(401).json({
-                success: false,
-                message: "Seul les clients peuvent ajouter un review "
-            });
-        }
-
         const reservation = await Reservation.findOne({
-            client: req.user.id,
-            project: req.body.projectId,
+            client: req.user._id,
+            project: req.params.projectId,
             statut: 'acceptée'
         });
 
@@ -27,22 +20,24 @@ module.exports.createReview = async (req, res) => {
         }
 
         const existingReview = await Review.findOne({
-            client: req.user.id,
-            project: req.body.projectId
+            client: req.user._id,
+            project: req.params.projectId
         });
 
         if (existingReview) {
             return res.status(400).json({
                 success: false,
-                message: "Vous avez dèja laisséun avis pour ce projet"
+                message: "Vous avez dèja laissé un avis pour ce projet"
             });
         }
 
         const review = await Review.create({
             client: req.user.id,
-            project: req.body.projectId,
-            stars: req.body.stars
+            project: req.params.projectId,
+            stars: req.body.stars,
         });
+
+        console.log('voici reviews',review)
 
         return res.status(201).json({
             success: true,
@@ -63,26 +58,8 @@ module.exports.createReview = async (req, res) => {
 
 module.exports.getAllReview = async(req, res) => {
     try{
-        
-            if (req.user.roles !== 'promoteur') {
-                return res.status(401).json({
-                    success: false,
-                    message: "Seul les promoteur peuvent voir tous les avis de eurs projets"
-                });
-            }
 
-            const reviews = await Review.find({
-                project: req.params.projectId,
-            });
-
-            if (reviews.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: "Ce projet n'as aucun avis"
-                });
-            }
-
-            const project = await Project.findById(req.body.projectId);
+        const project = await Project.findById(req.params.projectId);
 
             if (project.promoteur.toString() !== req.user.id.toString()) {
                 return res.status(401).json({
@@ -90,6 +67,16 @@ module.exports.getAllReview = async(req, res) => {
                     message: "Seul le promoteur de ce projet peut consulter les avis"
                 });
             }
+
+        const reviews = await Review.findOne({project : req.params.projectId});
+
+            if (!reviews) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Ce projet n'as aucun avis"
+                });
+            }
+
 
             return res.status(200).json({
                 success: true,

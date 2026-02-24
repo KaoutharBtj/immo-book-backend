@@ -12,6 +12,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/v1/auth', require('./routes/authRoutes'));
 app.use('/api/v1/projets', require ('./routes/promoProjectsRoutes'));
 app.use('/uploads', express.static( './uploads'));
+app.use('/api/v1/client-projects', require('./routes/clientProjectRoutes'));
+app.use('/api/v1/reservations', require('./routes/reservationRoutes'));
+app.use('/api/v1/reviews', require('./routes/reviewRoutes'));
+app.use('/api/v1/favoris', require('./routes/favorisRoutes'));
 
 
 app.use((req, res) => {

@@ -1,17 +1,21 @@
 const User = require('../models/User');
 const Project = require('../models/Project');
 const Reservation = require('../models/Reservation');
+const mongoose = require('mongoose');
 
 module.exports.createReservation = async(req, res) => {
+
     try {
-        if(req.user.roles !== 'client_physique' && req.user.roles != 'client_entreprise') {
-            return res.status(403).json({
+
+        if(!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
                 success: false,
-                message: "Seuls les clients peuvent reservés"
+                message: "Invalid project ID format"
             });
         }
 
-        const project = await Project.findById(req.body.projectId);
+        const project = await Project.findById(req.params.id);
+        console.log("project Id recue:", req.params.id);
         if (!project) {
             return res.status(404).json({
                 success:false,
@@ -26,11 +30,24 @@ module.exports.createReservation = async(req, res) => {
             });
         }
 
+        const existingReservation = await Reservation.findOne({
+            client: req.user._id,
+            project: req.params.id
+        });
+
+        if (existingReservation) {
+            return res.status(400).json({
+                success: false,
+                message: "Vous avez déjà réservé ce projet"
+            });
+        }
+
         const reservation = await Reservation.create({
             client: req.user.id,
-            project: req.body.projectId,
+            project: req.params.id,
             statut: 'en attente'
         });
+
 
         return res.status(201).json({
             success: true,
@@ -50,16 +67,8 @@ module.exports.createReservation = async(req, res) => {
 
 module.exports.getMyReservation = async (req, res) => {
     try{
-
-        if (req.user.roles !== 'client_physique' && req.user.roles !== 'client_entreprise') {
-            return res.status(401).json({
-                success: false,
-                message: " Seul les client peuvent voir leurs réservations"
-            });
-        }
-
         const reservation = await Reservation.find({client: req.user.id})
-        .populate('project', 'titre prix localisation imagePrincipale statut');
+        .populate('project');
 
         return res.status(200).json({
             success: true,
@@ -77,28 +86,12 @@ module.exports.getMyReservation = async (req, res) => {
 module.exports.approveReservation = async(req, res) => {
 
     try{
-
-        if (req.user.roles !== 'promoteur') {
-            return res.status(401).json({
-                success: false,
-                message: 'Seuls les promoteur peuvent approver une réservation'
-            });
-        }
-
+        
         const reservation = await Reservation.findById(req.params.id);
         if (!reservation) {
             return res.status(404).json({
                 success: false,
                 message: 'Réservation non trouvée'
-            });
-        }
-
-        const project = await Project.findById(reservation.project);
-
-        if (project.promoteur.toString() !== req.user._id.toString()) {
-            return res.status(401).json({
-                success: false,
-                message: 'Seul le promoteur de cet projet peut approuver'
             });
         }
 
@@ -109,7 +102,19 @@ module.exports.approveReservation = async(req, res) => {
             });
         }
 
-        reservation.statut = 'acceptée'
+        const checkReservationApproval = await Reservation.findOne({
+            project: reservation.project,
+            statut:'acceptée'
+        });
+
+        if(checkReservationApproval) {
+            return res.status(400).json({
+                success: false,
+                message: "Ce projet est dèja une réservation acceptée"
+            });
+        }
+
+        reservation.statut = 'acceptée';
         await reservation.save();
 
         return res.status(200).json({
@@ -129,14 +134,6 @@ module.exports.approveReservation = async(req, res) => {
 module.exports.refuseReservation = async(req, res) => {
 
     try{
-
-        if (req.user.roles !== 'promoteur') {
-            return res.status(401).json({
-                success: false,
-                message: "Seul les promoteurs peuvent refuser une réservation "
-            });
-        }
-
         
         const reservation = await Reservation.findById(req.params.id);
         if (!reservation) {

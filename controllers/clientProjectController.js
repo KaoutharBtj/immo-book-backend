@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const Project = require('../models/Project');
+const Review = require('../models/Review');
+const mongoose = require('mongoose');
 
 module.exports.getAllProjects = async (req, res) => {
 
@@ -12,15 +14,8 @@ module.exports.getAllProjects = async (req, res) => {
             });
         }
 
-        if (user.roles !== 'client_physique' && user.roles !== 'client_entreprise') {
-            return res.status(403).json({
-                success: false,
-                message: 'Vous n`avez pas le droit de voir toutes les projet'
-            });
-        }
-
         const projects = await Project.find({actif: true})
-        .populate('promoteur', 'nomEntreprise numeroRC email telephone ')
+        .populate('promoteur')
         .sort({ createdAt: -1});
 
         const projectsWithStars = await Promise.all(
@@ -40,9 +35,8 @@ module.exports.getAllProjects = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            count: projectsWithStars.length,
             data: projectsWithStars
-        })
+        });
 
     }catch(error) {
         return res.status(500).json({
@@ -54,15 +48,16 @@ module.exports.getAllProjects = async (req, res) => {
 
 module.exports.getProjectById = async(req, res) => {
     try{
-        if(req.user.roles !== 'client_physique' && req.user.roles !== 'client_entreprise') {
-            return res.status(403).json({
+
+        if (!mongoose.Types.bjectId.isValid(req.params.id)) {
+            return res.status(400).json({
                 success: false,
-                message: 'Seuls les clients peuvement consulter ce projet'
+                message: "Invalid project ID format"
             });
         }
 
         const project = await Project.findById(req.params.id)
-        .populate('promoteur', 'nomEntreprise numeroRC email telephone ');
+        .populate('promoteur');
 
         if (!project) {
             return res.status(404).json({
@@ -79,7 +74,7 @@ module.exports.getProjectById = async(req, res) => {
             project
         });
     }catch(error) {
-        console.error(' Erreur récupération projet:', error);
+        
         return res.status(500).json({
             success:false,
             message: "Erreur lors de la récupération du projet",
