@@ -3,12 +3,6 @@ const Project = require('../models/Project');
 
 module.exports.addFavoris = async(req, res) => {
     try{
-        if (req.user.roles !== 'client_physique' && req.user.roles !== 'client_entreprise') {
-            return res.status(401).json({
-                success: false,
-                message: "Seul les clients peuvent ajouter les projets aux favoris"
-            });
-        }
 
         const project = await Project.findById(req.body.projectId);
 
@@ -42,12 +36,6 @@ module.exports.addFavoris = async(req, res) => {
 module.exports.removeFavoris = async(req, res) => {
     try{
 
-        if (req.user.roles !== 'client_physique' && req.user.roles !== 'client_entreprise') {
-            return res.status(401).json({
-                success: false,
-                message: "Seul les clients peuvent supprimer un projet aux favoris"
-            });
-        }
         const serchProjectFavoris = await Project.findOne({ _id: req.body.projectId,  favoris: req.user.id });
 
         if (!serchProjectFavoris) {
@@ -77,14 +65,14 @@ module.exports.removeFavoris = async(req, res) => {
 
 module.exports.getMyFavoris = async(req, res) => {
     try{
-        
-        if (req.user.roles !== 'client_physique' && req.user.roles!== 'client_entreprise') {
-            return res.status(401).json({
+
+        const favoris = await Project.find({favoris: req.user.id});
+        if (favoris.length === 0) {
+            return res.status(200).json({
                 success: false,
-                message: "Seul les clients peuvent consulter leurs favoris"
+                message: "Vous n'avez ajouté aucun projet aux favoris."
             });
         }
-        const favoris = await Project.find({favoris: req.user.id});
 
         return res.status(200).json({
             success: true,

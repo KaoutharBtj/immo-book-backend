@@ -6,6 +6,6 @@ const {addFavoris, removeFavoris, getMyFavoris} = require('../controllers/favori
 router.get('/', protect, authorize('client_physique', 'client_entreprise'), getMyFavoris);
 
 router.post('/', protect, authorize('client_physique', 'client_entreprise'), addFavoris);
-router.delete('/:id',  protect, authorize('client_physique', 'client_entreprise'), removeFavoris);
+router.delete('/',  protect, authorize('client_physique', 'client_entreprise'), removeFavoris);
 
 module.exports = router;
