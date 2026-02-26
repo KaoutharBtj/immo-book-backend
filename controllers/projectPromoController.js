@@ -58,7 +58,6 @@ module.exports.createProject = async (req, res) => {
             });
         }
 
-        // Construire le chemin de l'image
         const imagePrincipale = `uploads/${req.file.filename}`;
 
         // Créer le projet
@@ -489,7 +488,7 @@ module.exports.searchProject = async (req, res) => {
 module.exports.addImagesToGallery = async (req, res) => {
 
         try {
-            const { id } = req.params;
+            const { id } = req.params.id;
 
             console.log('=== AJOUT IMAGES GALERIE ===');
             console.log('Projet ID:', id);
@@ -502,7 +501,7 @@ module.exports.addImagesToGallery = async (req, res) => {
                 })
             }
 
-            const project = await Project.findById(id);
+            const project = await Project.findById(req.params.id);
 
             if (!project) {
                 return res.status(404).json({
