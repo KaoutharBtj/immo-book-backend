@@ -60,7 +60,6 @@ module.exports.createProject = async (req, res) => {
 
         const imagePrincipale = `uploads/${req.file.filename}`;
 
-        // Créer le projet
         const nouveauProjet = await Project.create({
             titre,
             description,
@@ -516,7 +515,7 @@ module.exports.addImagesToGallery = async (req, res) => {
                 })
             }
 
-            const newImages = req.files.map(file => `/uploads/${file.filename}`);
+            const newImages = req.files.map(file => `uploads/${file.filename}`);
 
 
             if ((project.galerie?.length || 0) + newImages.length > 10) {
