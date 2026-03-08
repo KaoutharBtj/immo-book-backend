@@ -36,7 +36,7 @@ module.exports.addFavoris = async(req, res) => {
 module.exports.removeFavoris = async(req, res) => {
     try{
 
-        const serchProjectFavoris = await Project.findOne({ _id: req.body.projectId,  favoris: req.user.id });
+        const serchProjectFavoris = await Project.findOne({ _id: req.params.projectId,  favoris: req.user.id });
 
         if (!serchProjectFavoris) {
             return res.status(404).json({
@@ -45,7 +45,7 @@ module.exports.removeFavoris = async(req, res) => {
             });
         }
 
-        const favoris = await Project.findByIdAndUpdate(req.body.projectId, {
+        const favoris = await Project.findByIdAndUpdate(req.params.projectId, {
             $pull: {favoris: req.user.id}
         }, {new: true});
 
