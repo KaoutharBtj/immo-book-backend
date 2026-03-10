@@ -49,7 +49,7 @@ module.exports.getAllProjects = async (req, res) => {
 module.exports.getProjectById = async(req, res) => {
     try{
 
-        if (!mongoose.Types.bjectId.isValid(req.params.id)) {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid project ID format"
@@ -71,10 +71,10 @@ module.exports.getProjectById = async(req, res) => {
 
         return res.status(200).json({
             success: true,
-            project
+            data: project
         });
     }catch(error) {
-        
+        console.log('Error details:', error);
         return res.status(500).json({
             success:false,
             message: "Erreur lors de la récupération du projet",
