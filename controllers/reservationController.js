@@ -176,3 +176,27 @@ module.exports.refuseReservation = async(req, res) => {
     }
 }
 
+module.exports.getPromoReservations = async (req, res) => {
+    try {
+        // find all projects belonging to this promoteur
+        const projects = await Project.find({ promoteur: req.user.id }).select('_id');
+        const projectIds = projects.map(p => p._id);
+
+        // find all reservations for these projects
+        const reservations = await Reservation.find({ project: { $in: projectIds } })
+            .populate('project')
+            .populate('client', 'nom prenom email');
+
+        return res.status(200).json({
+            success: true,
+            reservations
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors de la récupération des réservations",
+            error: error.message
+        });
+    }
+} 
+
