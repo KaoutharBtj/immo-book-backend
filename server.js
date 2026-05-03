@@ -16,6 +16,7 @@ app.use('/api/v1/client-projects', require('./routes/clientProjectRoutes'));
 app.use('/api/v1/reservations', require('./routes/reservationRoutes'));
 app.use('/api/v1/reviews', require('./routes/reviewRoutes'));
 app.use('/api/v1/favoris', require('./routes/favorisRoutes'));
+app.use('/api/v1/dashboard', require('./routes/dashboardRoutes'));
 
 
 app.use((req, res) => {
